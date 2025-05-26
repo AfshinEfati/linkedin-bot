@@ -1,1 +1,11 @@
-/node_mudules
+node_modules/
+*.log
+.DS_Store
+.env
+*.sqlite
+.vscode/
+.idea/
+*.bak
+__pycache__/
+/tmp/
+linkedin-session/
