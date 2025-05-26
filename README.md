@@ -53,7 +53,7 @@ npm install -g n8n
 ### 1. کلون کردن پروژه
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/linkedin-bot.git
+git clone https://github.com/AfshinEfati/linkedin-bot.git
 cd linkedin-bot
 ```
 
