@@ -11,3 +11,4 @@ __pycache__/
 linkedin-session/
 .env
 posted.json
+*.png
