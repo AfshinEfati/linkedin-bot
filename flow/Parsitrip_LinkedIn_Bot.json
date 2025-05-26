@@ -6,8 +6,7 @@
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 6
+              "field": "hours"
             }
           ]
         }
@@ -15,8 +14,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1020,
-        -480
+        -1400,
+        -860
       ],
       "id": "2316be6c-ff48-4165-95b5-9aeb9594003d",
       "name": "Schedule Trigger"
@@ -29,8 +28,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -780,
-        -480
+        -1200,
+        -860
       ],
       "id": "e15ec1fb-a4b0-45d8-9e1a-5ba6a2cea509",
       "name": "HTTP Request"
@@ -42,8 +41,8 @@
       "type": "n8n-nodes-base.xml",
       "typeVersion": 1,
       "position": [
-        -780,
-        -240
+        -1040,
+        -860
       ],
       "id": "001536e6-a798-4515-80d1-e5e2bab72975",
       "name": "XML"
@@ -65,24 +64,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -540,
-        -240
+        -860,
+        -860
       ],
       "id": "1a8b9938-a262-44d6-a94e-0fb82e321095",
       "name": "Edit Fields"
-    },
-    {
-      "parameters": {
-        "jsCode": "const raw = items[0].json.items;\nconst posts = JSON.parse(raw); // تبدیل string به آرایه\nreturn posts.map(post => ({ json: post }));\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -300,
-        -240
-      ],
-      "id": "c2f4ff18-ccdf-4295-b9b1-2efa5e547855",
-      "name": "Code"
     },
     {
       "parameters": {
@@ -91,7 +77,7 @@
             {
               "id": "6002d8f5-f081-4646-b6bc-691e6f59134f",
               "name": "=linkedin_text",
-              "value": "={{ $json.title + \"\\nلینک: \" + $json.link + \"\\n\\n\" + ($json.description || '').slice(0, 200) + \"...\\n\\n#بلیط_هواپیما #گردشگری #Parsitrip\" }}\n",
+              "value": "={{ JSON.parse($json.stdout).title + \"\\nلینک: \" + JSON.parse($json.stdout).link + \"\\n\\n\" + (JSON.parse($json.stdout).description || '').slice(0, 200) + \"...\\n\\n#بلیط_هواپیما #گردشگری #Parsitrip\" }}\n",
               "type": "string"
             }
           ]
@@ -101,11 +87,26 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -80,
-        -240
+        -1200,
+        -520
       ],
       "id": "ca8cc7c4-e76f-4f77-9e4c-171507410597",
       "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "=node -e '\nconst fs = require(\"fs\");\nconst path = \"/home/afshin/projects/linkedin-bot/posted.json\";\nconst input = {{ JSON.stringify($json) }};\nconst guid = input.guid;\n\nif (!guid) {\n  console.error(\"⛔ GUID missing!\");\n  process.exit(1);\n}\n\nlet data = [];\n\nif (fs.existsSync(path)) {\n  const content = fs.readFileSync(path, \"utf8\").trim();\n  if (content) {\n    try {\n      data = JSON.parse(content);\n    } catch (e) {\n      console.error(\"❌ Invalid JSON in posted.json\");\n      process.exit(1);\n    }\n  }\n}\n\nconst exists = data.some(item => item.guid === guid);\n\nif (!exists) {\n  const newItem = { ...input, posted: false };\n  data.push(newItem);\n  fs.writeFileSync(path, JSON.stringify(data, null, 2));\n  console.log(JSON.stringify(newItem)); // خروجی بده به نود بعدی\n}\n'\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1780,
+        -520
+      ],
+      "id": "5a3bcaad-b221-426a-b988-e7f1c0878ae4",
+      "name": "export to file",
+      "retryOnFail": true
     },
     {
       "parameters": {
@@ -114,12 +115,62 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        360,
-        -240
+        -860,
+        -520
       ],
       "id": "2576f1a8-66c1-4698-99c2-c090b5866dc6",
-      "name": "Execute Command",
+      "name": "post to linkedin",
       "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = JSON.parse($json[\"items\"]);\nreturn items.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        -860
+      ],
+      "id": "e2524e01-b576-4497-99da-e72c94687a7f",
+      "name": "json parse"
+    },
+    {
+      "parameters": {
+        "command": "=node -e '\nconst fs = require(\"fs\");\nconst path = \"/home/afshin/projects/linkedin-bot/posted.json\";\nconst post = JSON.parse(`{{ $json.stdout }}`);\nconst guid = post.guid;\nif (!guid || guid.trim() === \"\") {\n  console.error(\"❌ Missing GUID. Skipping update.\");\n  process.exit(1);\n}\nlet data = [];\nif (fs.existsSync(path)) {\n  const content = fs.readFileSync(path, \"utf8\").trim();\n  if (content) {\n    try {\n      data = JSON.parse(content);\n    } catch (err) {\n      console.error(\"⚠️ Invalid JSON. Skipping update.\");\n      process.exit(1);\n    }\n  }\n}\nconst index = data.findIndex(i => i.guid === guid);\nif (index !== -1) {\n  data[index].posted = true;\n} else {\n  data.push({ ...post, posted: true });\n}\nfs.writeFileSync(path, JSON.stringify(data, null, 2));\n'\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -220
+      ],
+      "id": "88f7ddc4-49df-4fc4-b509-da879123fd07",
+      "name": "Append GUID"
+    },
+    {
+      "parameters": {
+        "command": "=node -e '\nconst fs = require(\"fs\");\nconst path = \"/home/afshin/projects/linkedin-bot/posted.json\";\n\nif (!fs.existsSync(path)) {\n  console.log(\"[]\");\n  process.exit(0);\n}\n\nconst content = fs.readFileSync(path, \"utf8\").trim();\nif (!content) {\n  console.log(\"[]\");\n  process.exit(0);\n}\n\nlet data;\ntry {\n  data = JSON.parse(content);\n} catch (err) {\n  console.error(\"❌ Invalid JSON in posted.json\");\n  process.exit(1);\n}\n\n// پیدا کردن اولین پستی که هنوز ارسال نشده\nconst item = data.find(i => i.posted === false);\n\nif (item) {\n  console.log(JSON.stringify(item)); // ✅ پاس دادن برای ارسال به لینکدین\n} else {\n  console.log(\"[]\"); // هیچ پستی برای ارسال وجود نداره\n}\n'\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1480,
+        -520
+      ],
+      "id": "588c989d-66b2-401d-9a1d-583549a0e343",
+      "name": "Find new"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        -1400,
+        -220
+      ],
+      "id": "dd8fa35c-118d-41b4-ac1b-650e12d10f02",
+      "name": "Merge"
     }
   ],
   "pinData": {},
@@ -161,18 +212,7 @@
       "main": [
         [
           {
-            "node": "Code",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields1",
+            "node": "json parse",
             "type": "main",
             "index": 0
           }
@@ -183,7 +223,67 @@
       "main": [
         [
           {
-            "node": "Execute Command",
+            "node": "post to linkedin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "export to file": {
+      "main": [
+        [
+          {
+            "node": "Find new",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "json parse": {
+      "main": [
+        [
+          {
+            "node": "export to file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post to linkedin": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Find new": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Append GUID",
             "type": "main",
             "index": 0
           }
@@ -191,11 +291,11 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c6ed1ff8-c1f9-49ea-bff9-e24260dbdeff",
+  "versionId": "f6ed9c4f-6bd5-4574-911b-18035121b3b4",
   "meta": {
     "instanceId": "a39d6ed0f05ee20a2714d23a09538f47fa33638693aec4f130ae020e877b2bc2"
   },

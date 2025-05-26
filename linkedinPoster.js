@@ -1,11 +1,20 @@
-// const puppeteer = require('puppeteer');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-import dotenv from 'dotenv'
-dotenv.config()
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import dotenv from 'dotenv';
+dotenv.config();
 puppeteer.use(StealthPlugin());
+
 const EMAIL = process.env.LINKEDIN_EMAIL;
 const PASSWORD = process.env.LINKEDIN_PASSWORD;
+console.log(process.env.LINKEDIN_PASSWORD);
+console.log(process.env.LINKEDIN_EMAIL);
+if (!EMAIL || !PASSWORD) {
+    console.error('❌ EMAIL or PASSWORD is missing. Please check your .env file.');
+    process.exit(1);
+}
+const userDataDir = process.env.PUPPETEER_USER_DATA_DIR;
+const companyUrl = process.env.LINKEDIN_ADMIN_POST_URL /*|| process.env.LINKEDIN_COMPANY_URL*/;
+
 // برای اجرای این اسکریپت، باید محتوای پست را به صورت آرگومان خط فرمان ارسال کنید
 // مثال: node linkedinPoster.js "این یک پست تستی است"
 const CONTENT = process.argv.slice(2).join(' ');
@@ -18,39 +27,49 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
         headless: false,
         defaultViewport: null,
         args: ['--start-maximized'],
-        userDataDir: process.env.PUPPETEER_USER_DATA_DIR,
+        userDataDir: userDataDir,
     });
     const page = await browser.newPage();
     // مرحله ۱: برو به صفحه اصلی
-    console.log('🌐 Navigating to LinkedIn home...');
-    await page.goto('https://www.linkedin.com', {waitUntil: 'domcontentloaded', timeout: 30000});
+    await page.goto('https://www.linkedin.com/feed', { waitUntil: 'domcontentloaded' });
+    const currentUrl = page.url();
+    console.log('🧭 currentUrl =', currentUrl);
 
-    // مرحله ۲: چک کن که لاگین هستیم یا نه
     let isLoggedIn = true;
-    try {
-        await page.waitForSelector('#username', {timeout: 5000});
+    if (!currentUrl.includes('/feed')) {
+        console.log('🔒 Not logged in. Proceeding to login...');
         isLoggedIn = false;
-    } catch (err) {
-        // یعنی لاگین هستیم چون فیلد یوزرنیم پیدا نشد
+    } else {
         console.log('✅ Already logged in.');
     }
 
     if (!isLoggedIn) {
-        console.log('🔐 Logging in...');
-        await page.type('#username', EMAIL, {delay: 30});
-        await page.type('#password', PASSWORD, {delay: 30});
+        if (!EMAIL || !PASSWORD) {
+            console.error('❌ EMAIL or PASSWORD is missing. Please check your .env file.');
+            console.log(EMAIL);
+            console.log(PASSWORD);
+            process.exit(1);
+        }
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2' });
+
+        await page.waitForSelector('#username');
+        await page.type('#username', EMAIL.trim(), { delay: 30 });
+
+        await page.waitForSelector('#password');
+        await page.type('#password', PASSWORD.trim(), { delay: 30 });
+
         await page.click('button[type="submit"]');
-        await page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 20000});
-        console.log('✅ Login done.');
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
     }
 
     // 2. Go to company page
     console.log('🏢 Navigating to Parsitrip company page...');
-    await page.goto('process.env.LINKEDIN_COMPANY_URL', {waitUntil: 'networkidle2'});
+    await page.goto(companyUrl, {waitUntil: 'networkidle2'});
     await wait(3000);
     await page.screenshot({path: '/tmp/after-company-page.png'});
     await wait(3000);
-    await page.goto('process.env.LINKEDIN_ADMIN_POST_URL');
+    await page.goto(companyUrl);
+    console.log(companyUrl);
     await wait(3000);
 
 
