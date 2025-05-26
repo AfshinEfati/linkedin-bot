@@ -1,0 +1,204 @@
+{
+  "name": "Parsitrip LinkedIn Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1020,
+        -480
+      ],
+      "id": "2316be6c-ff48-4165-95b5-9aeb9594003d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://backend.parsitrip.com/rss/posts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -780,
+        -480
+      ],
+      "id": "e15ec1fb-a4b0-45d8-9e1a-5ba6a2cea509",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        -780,
+        -240
+      ],
+      "id": "001536e6-a798-4515-80d1-e5e2bab72975",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5cd2fe4f-b5f6-432c-a315-c84aaa81311c",
+              "name": "items",
+              "value": "={{$json[\"rss\"][\"channel\"][\"item\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -540,
+        -240
+      ],
+      "id": "1a8b9938-a262-44d6-a94e-0fb82e321095",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = items[0].json.items;\nconst posts = JSON.parse(raw); // تبدیل string به آرایه\nreturn posts.map(post => ({ json: post }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        -240
+      ],
+      "id": "c2f4ff18-ccdf-4295-b9b1-2efa5e547855",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6002d8f5-f081-4646-b6bc-691e6f59134f",
+              "name": "=linkedin_text",
+              "value": "={{ $json.title + \"\\nلینک: \" + $json.link + \"\\n\\n\" + ($json.description || '').slice(0, 200) + \"...\\n\\n#بلیط_هواپیما #گردشگری #Parsitrip\" }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        -240
+      ],
+      "id": "ca8cc7c4-e76f-4f77-9e4c-171507410597",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "command": "=node /home/afshin/projects/linkedin-bot/linkedinPoster.js \"{{ $json.linkedin_text }}\"\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        360,
+        -240
+      ],
+      "id": "2576f1a8-66c1-4698-99c2-c090b5866dc6",
+      "name": "Execute Command",
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c6ed1ff8-c1f9-49ea-bff9-e24260dbdeff",
+  "meta": {
+    "instanceId": "a39d6ed0f05ee20a2714d23a09538f47fa33638693aec4f130ae020e877b2bc2"
+  },
+  "id": "lCjBnZd4v8DkOH3f",
+  "tags": []
+}
