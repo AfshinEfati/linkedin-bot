@@ -1,10 +1,11 @@
 // const puppeteer = require('puppeteer');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-
+import dotenv from 'dotenv'
+dotenv.config()
 puppeteer.use(StealthPlugin());
-const EMAIL = 'email_here';
-const PASSWORD = 'password_here';
+const EMAIL = process.env.LINKEDIN_EMAIL;
+const PASSWORD = process.env.LINKEDIN_PASSWORD;
 // برای اجرای این اسکریپت، باید محتوای پست را به صورت آرگومان خط فرمان ارسال کنید
 // مثال: node linkedinPoster.js "این یک پست تستی است"
 const CONTENT = process.argv.slice(2).join(' ');
@@ -17,17 +18,17 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
         headless: false,
         defaultViewport: null,
         args: ['--start-maximized'],
-        userDataDir: '/home/afshin/.puppeteer-profile/parsitrip'
+        userDataDir: process.env.PUPPETEER_USER_DATA_DIR,
     });
     const page = await browser.newPage();
     // مرحله ۱: برو به صفحه اصلی
     console.log('🌐 Navigating to LinkedIn home...');
-    await page.goto('https://www.linkedin.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.goto('https://www.linkedin.com', {waitUntil: 'domcontentloaded', timeout: 30000});
 
     // مرحله ۲: چک کن که لاگین هستیم یا نه
     let isLoggedIn = true;
     try {
-        await page.waitForSelector('#username', { timeout: 5000 });
+        await page.waitForSelector('#username', {timeout: 5000});
         isLoggedIn = false;
     } catch (err) {
         // یعنی لاگین هستیم چون فیلد یوزرنیم پیدا نشد
@@ -36,38 +37,41 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     if (!isLoggedIn) {
         console.log('🔐 Logging in...');
-        await page.type('#username', EMAIL, { delay: 30 });
-        await page.type('#password', PASSWORD, { delay: 30 });
+        await page.type('#username', EMAIL, {delay: 30});
+        await page.type('#password', PASSWORD, {delay: 30});
         await page.click('button[type="submit"]');
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 });
+        await page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 20000});
         console.log('✅ Login done.');
     }
 
     // 2. Go to company page
     console.log('🏢 Navigating to Parsitrip company page...');
-    await page.goto('https://www.linkedin.com/company/parsitrip', { waitUntil: 'networkidle2' });
+    await page.goto('process.env.LINKEDIN_COMPANY_URL', {waitUntil: 'networkidle2'});
     await wait(3000);
-    await page.screenshot({ path: '/tmp/after-company-page.png' });
+    await page.screenshot({path: '/tmp/after-company-page.png'});
+    await wait(3000);
+    await page.goto('process.env.LINKEDIN_ADMIN_POST_URL');
+    await wait(3000);
 
 
     // 3. Open "Start a post"
     console.log('✍️ Opening post box...');
     await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a'));
-        const target = links.find(a => a.innerText.includes('Start a post'));
+        const elements = Array.from(document.querySelectorAll('a, button'));
+        const target = elements.find(el => el.textContent?.trim().includes('Start a post'));
         if (target) target.click();
     });
 
     // 4. Wait for textbox and type content
-    await page.waitForSelector('[role="textbox"]', { timeout: 10000 });
+    await page.waitForSelector('[role="textbox"]', {timeout: 10000});
     await wait(1000);
-    await page.type('[role="textbox"]', CONTENT, { delay: 10 });
+    await page.type('[role="textbox"]', CONTENT, {delay: 10});
 
     // 5. Fire input event (بدون blur)
     await page.evaluate(() => {
         const box = document.querySelector('[role="textbox"]');
         if (box) {
-            box.dispatchEvent(new Event('input', { bubbles: true }));
+            box.dispatchEvent(new Event('input', {bubbles: true}));
         }
     });
 
@@ -96,7 +100,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
         await wait(3000); // 5 minutes
     } else {
         console.log('❌ Post button not found or disabled.');
-        await page.screenshot({ path: 'post-failed.png' });
+        await page.screenshot({path: 'post-failed.png'});
         await wait(3000);
     }
 
