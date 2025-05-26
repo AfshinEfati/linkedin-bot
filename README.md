@@ -99,10 +99,8 @@ node linkedinPoster.js "این یک پست تستی است."
 4. Write Binary File (ذخیره متن در `/tmp/post.txt`)
 5. Execute Command:
 
-```bash
-node /home/YOUR_USER/projects/linkedin-bot/linkedinPoster.js /tmp/post.txt
-```
-
+### n8n:
+الان به صورت پیش فرض به RSS سایت https://parsitrip.com متصل هستش که میتونید عوض کنید 
 ---
 
 ## 🧩 نکات امنیتی
